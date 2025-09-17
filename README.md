@@ -1,10 +1,10 @@
-# Eagle Eye Dashboard 🦅
+# Eagle Eye Dashboard 🦅 (###CAW!)
 
 A comprehensive trading risk monitoring and analytics dashboard built with React. Eagle Eye provides real-time insights into trading account performance, risk utilization, and volume analytics with advanced visualization capabilities.
 
 ## Features
 
-### 📊 Real-Time Analytics
+### 📊 Analytics
 - **Account Overview**: Monitor total accounts, limit utilization, and risk metrics
 - **Hot Account Detection**: Automatically identifies accounts with unusual trading activity (>2.5σ above average)
 - **Limit Monitoring**: Track accounts approaching or exceeding notional trading limits
@@ -103,21 +103,7 @@ Accounts are flagged as "hot" when their maximum volume exceeds their average vo
 - `npm run build` - Builds the app for production
 - `npm run eject` - Ejects from Create React App (one-way operation)
 
-## Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Contact
-
-For questions or support, please open an issue on GitHub.
 
 ---
 
