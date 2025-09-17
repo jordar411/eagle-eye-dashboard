@@ -13,6 +13,7 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [hoveredTooltip, setHoveredTooltip] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const tooltipDefinitions = {
     totalAccounts: "Total number of trading accounts being monitored in the system.",
@@ -167,12 +168,12 @@ const App = () => {
     }
 
     const headers = jsonData[0];
-    const dateColumns = headers.slice(4);
+    const dateColumns = headers.slice(3);
 
     const processedData = jsonData.slice(1).map(row => {
       const accountNumber = row[0];
       const accountName = row[1];
-      const notionalLimit = parseFloat(row[3]) || 0;
+      const notionalLimit = parseFloat(row[2]) || 0;
       if (!accountNumber || !accountName || notionalLimit <= 0) return null;
 
       const trades = {};
@@ -181,7 +182,7 @@ const App = () => {
       let limitWarningCount = 0;
 
       dateColumns.forEach((date, index) => {
-        const volume = parseFloat(row[index + 4]) || 0;
+        const volume = parseFloat(row[index + 3]) || 0;
         trades[date] = volume;
         totalVolume += volume;
         if (volume > 0) {
@@ -409,8 +410,8 @@ const App = () => {
                 <ul className="space-y-1 text-sm">
                   <li>• Column A: Client account numbers</li>
                   <li>• Column B: Account names</li>
-                  <li>• Column D: Notional limits</li>
-                  <li>• Column E+: Trading dates and volumes</li>
+                  <li>• Column C: Notional limits</li>
+                  <li>• Column D+: Trading dates and volumes</li>
                 </ul>
               </div>
               <div>
@@ -431,10 +432,10 @@ const App = () => {
   if (currentPage === 'stats') {
     const tabs = [
       { id: 'overview', label: 'Overview', icon: BarChart3 },
+      { id: 'all-accounts', label: 'All Accounts', icon: User },
       { id: 'limit-monitor', label: 'Limit Monitor', icon: AlertTriangle },
       { id: 'top-volume', label: 'Top Volume', icon: TrendingUp },
-      { id: 'hot-accounts', label: 'Hot Accounts', icon: Zap },
-      { id: 'all-accounts', label: 'All Accounts', icon: User }
+      { id: 'hot-accounts', label: 'Hot Accounts', icon: Zap }
     ];
 
     return (
@@ -516,7 +517,7 @@ const App = () => {
                           </div>
                           <p className="text-2xl font-bold text-white">{stats.totalOverlimitAccounts}</p>
                           <p className="text-blue-300/70 text-xs mt-1">
-                            Accounts exceeding 100% utilization
+                            Accounts exceeding 100% limit utilization
                           </p>
                         </div>
                       </div>
@@ -588,7 +589,7 @@ const App = () => {
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center">
-                            <p className="text-blue-200 text-sm font-medium">Accounts at Risk</p>
+                            <p className="text-blue-200 text-sm font-medium">% of Accounts Near Limit</p>
                             {renderTooltipIcon('accountsAtRisk')}
                           </div>
                           <p className="text-2xl font-bold text-white">
@@ -603,7 +604,7 @@ const App = () => {
                   </div>
 
                   <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-blue-300/20">
-                    <h2 className="text-2xl font-bold text-white mb-6">Top 10 Account Volumes</h2>
+                    <h2 className="text-2xl font-bold text-white mb-6">Top 10 Account Notional Volumes</h2>
                     <div className="h-96">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={stats.topVolume.map(account => ({
@@ -622,7 +623,7 @@ const App = () => {
                           <YAxis
                             stroke="#dbeafe"
                             fontSize={12}
-                            tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
+                            tickFormatter={(value) => `${formatCurrency((value / 1000000).toFixed(1))}M`}
                           />
                           <Tooltip
                             contentStyle={{
@@ -812,10 +813,26 @@ const App = () => {
                 <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-blue-300/20">
                   <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
                     <User className="w-6 h-6 mr-3 text-blue-400" />
-                    All Accounts ({data.accounts.length})
+                    All Accounts ({data.accounts.filter(account =>
+                      account.accountName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      account.accountNumber.toLowerCase().includes(searchTerm.toLowerCase())
+                    ).length})
                   </h2>
+                  <div className="mb-6">
+                    <input
+                      type="text"
+                      placeholder="Search by account name or number..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full px-4 py-3 bg-white/10 border border-blue-300/20 rounded-xl text-white placeholder-blue-300/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-xl"
+                    />
+                  </div>
                   <div className="grid gap-4 max-h-96 overflow-y-auto">
                     {data.accounts
+                      .filter(account =>
+                        account.accountName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        account.accountNumber.toLowerCase().includes(searchTerm.toLowerCase())
+                      )
                       .sort((a, b) => b.totalVolume - a.totalVolume)
                       .map((account, index) => (
                       <div
