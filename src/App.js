@@ -88,7 +88,7 @@ const App = () => {
         if (Math.random() > 0.1) {
           const safeMultiplier = 0.3 + Math.random() * 0.4;
           volume = baseVolume * safeMultiplier;
-          
+
           if (accountNumber === 'JPM002' && index === 5) {
             volume = notionalLimit * 1.08;
           } else if (accountNumber === 'C005' && index < 4) {
@@ -98,28 +98,32 @@ const App = () => {
           } else if (accountNumber === 'HSBC013' && [1, 8, 15].includes(index)) {
             volume = notionalLimit * (0.72 + Math.random() * 0.15);
           }
-          
+
           volume *= (0.9 + Math.random() * 0.2);
 
           if (volume >= notionalLimit * 0.7) {
             limitWarningCount++;
           }
         }
-        
+
         trades[date] = Math.round(volume);
         totalVolume += volume;
         if (volume > 0) validTrades.push(volume);
       });
 
       const avgVolume = validTrades.length > 0 ? totalVolume / validTrades.length : 0;
-      const variance = validTrades.length > 1 
+      const variance = validTrades.length > 1
         ? validTrades.reduce((sum, vol) => sum + Math.pow(vol - avgVolume, 2), 0) / (validTrades.length - 1)
         : 0;
       const stdDev = Math.sqrt(variance);
-      
+
       const maxVolume = Math.max(...validTrades, 0);
       const isHot = maxVolume > (avgVolume + 2.5 * stdDev) && stdDev > 0;
-      
+
+      // Calculate hot days (days where volume > avg + 2.5 * stdDev)
+      const hotThreshold = avgVolume + (2.5 * stdDev);
+      const hotDays = validTrades.filter(volume => volume > hotThreshold && stdDev > 0).length;
+
       const currentUtilization = maxVolume / notionalLimit;
       const isNearLimit = currentUtilization >= 0.7;
       const isOverLimit = currentUtilization > 1.0;
@@ -134,6 +138,7 @@ const App = () => {
         maxVolume,
         isHot,
         hotScore: isHot ? maxVolume - (avgVolume + 2.5 * stdDev) : 0,
+        hotDays,
         notionalLimit,
         currentUtilization,
         isNearLimit,
@@ -194,14 +199,18 @@ const App = () => {
       });
 
       const avgVolume = validTrades.length > 0 ? totalVolume / validTrades.length : 0;
-      const variance = validTrades.length > 1 
+      const variance = validTrades.length > 1
         ? validTrades.reduce((sum, vol) => sum + Math.pow(vol - avgVolume, 2), 0) / (validTrades.length - 1)
         : 0;
       const stdDev = Math.sqrt(variance);
-      
+
       const maxVolume = Math.max(...validTrades, 0);
       const isHot = maxVolume > (avgVolume + 2.5 * stdDev) && stdDev > 0;
-      
+
+      // Calculate hot days (days where volume > avg + 2.5 * stdDev)
+      const hotThreshold = avgVolume + (2.5 * stdDev);
+      const hotDays = validTrades.filter(volume => volume > hotThreshold && stdDev > 0).length;
+
       const currentUtilization = maxVolume / notionalLimit;
       const isNearLimit = currentUtilization >= 0.7;
       const isOverLimit = currentUtilization > 1.0;
@@ -216,6 +225,7 @@ const App = () => {
         maxVolume,
         isHot,
         hotScore: isHot ? maxVolume - (avgVolume + 2.5 * stdDev) : 0,
+        hotDays,
         notionalLimit,
         currentUtilization,
         isNearLimit,
@@ -343,7 +353,7 @@ const App = () => {
             <h1 className="text-5xl font-bold text-white mb-4">Eagle Eye</h1>
             <p className="text-blue-200 text-lg max-w-2xl mx-auto">
               Monitor trading limits and analyze account performance with advanced risk detection
-            </p>
+            </p> <br></br>
           </div>
 
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 mb-8 border border-blue-300/20 shadow-2xl">
@@ -876,6 +886,9 @@ const App = () => {
     // Calculate days active (days with volume > 0)
     const daysActive = Object.values(selectedAccount.trades).filter(volume => volume > 0).length;
 
+    // Calculate days breached (days with volume > notional limit)
+    const daysBreached = Object.values(selectedAccount.trades).filter(volume => volume > selectedAccount.notionalLimit).length;
+
     // Calculate average notional volume (total volume / days active)
     const averageNotionalVolume = daysActive > 0 ? selectedAccount.totalVolume / daysActive : 0;
 
@@ -982,8 +995,34 @@ const App = () => {
                   <Activity className="w-6 h-6 text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-blue-200 text-sm font-medium">Days Active (Within Period)</p>
+                  <p className="text-blue-200 text-sm font-medium"># Days Active (Within Period)</p>
                   <p className="text-xl font-bold text-white">{daysActive}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Hot Days */}
+            <div className={`bg-white/10 backdrop-blur-xl rounded-2xl p-6 border ${selectedAccount.hotDays > 0 ? 'border-red-400/20' : 'border-blue-300/20'}`}>
+              <div className="flex items-center">
+                <div className={`w-12 h-12 ${selectedAccount.hotDays > 0 ? 'bg-red-500/20' : 'bg-blue-500/20'} rounded-xl flex items-center justify-center mr-4`}>
+                  <Zap className={`w-6 h-6 ${selectedAccount.hotDays > 0 ? 'text-red-400' : 'text-blue-400'}`} />
+                </div>
+                <div>
+                  <p className="text-blue-200 text-sm font-medium"># Hot Days (>2.5σ above average)</p>
+                  <p className={`text-xl font-bold ${selectedAccount.hotDays > 0 ? 'text-red-400' : 'text-white'}`}>{selectedAccount.hotDays}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Days Breached */}
+            <div className={`bg-white/10 backdrop-blur-xl rounded-2xl p-6 border ${daysBreached > 0 ? 'border-red-400/20' : 'border-blue-300/20'}`}>
+              <div className="flex items-center">
+                <div className={`w-12 h-12 ${daysBreached > 0 ? 'bg-red-500/20' : 'bg-green-500/20'} rounded-xl flex items-center justify-center mr-4`}>
+                  <AlertTriangle className={`w-6 h-6 ${daysBreached > 0 ? 'text-red-400' : 'text-green-400'}`} />
+                </div>
+                <div>
+                  <p className="text-blue-200 text-sm font-medium"># Days Breached Notional Limit</p>
+                  <p className={`text-xl font-bold ${daysBreached > 0 ? 'text-red-400' : 'text-green-400'}`}>{daysBreached}</p>
                 </div>
               </div>
             </div>
